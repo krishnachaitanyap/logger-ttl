@@ -76,23 +76,59 @@ public class TTLAnnotationProcessor {
         // Check field-level annotation (logger instance)
         TTLConfig fieldConfig = getFieldLevelTTL(callingClass, loggerClass);
         if (fieldConfig != null && fieldConfig.isLevelAffected(logLevel)) {
-            return fieldConfig;
+            return applyRuntimeOverrides(callingClass, callingMethod, null, fieldConfig);
         }
         
         // Check method-level annotation
         TTLConfig methodConfig = getMethodLevelTTL(callingClass, callingMethod);
         if (methodConfig != null && methodConfig.isLevelAffected(logLevel)) {
-            return methodConfig;
+            return applyRuntimeOverrides(callingClass, callingMethod, null, methodConfig);
         }
         
         // Check class-level annotation
         TTLConfig classConfig = getClassLevelTTL(callingClass);
         if (classConfig != null && classConfig.isLevelAffected(logLevel)) {
-            return classConfig;
+            return applyRuntimeOverrides(callingClass, callingMethod, null, classConfig);
         }
         
         // No TTL restrictions found
         return TTLConfig.defaultConfig();
+    }
+    
+    /**
+     * Apply runtime TTL overrides from TTLManager
+     */
+    private static TTLConfig applyRuntimeOverrides(Class<?> callingClass, String callingMethod, 
+                                                 String fieldName, TTLConfig originalConfig) {
+        TTLManager manager = TTLManager.getInstance();
+        
+        // Check if TTL should be bypassed
+        if (manager.shouldBypassTTL(callingClass, callingMethod, fieldName, originalConfig)) {
+            return TTLConfig.defaultConfig(); // No restrictions
+        }
+        
+        // Apply global TTL extension
+        TTLConfig extendedConfig = manager.applyGlobalExtension(originalConfig);
+        
+        // Check for specific overrides
+        TTLOverride classOverride = manager.getClassTTLOverride(callingClass);
+        if (classOverride != null) {
+            return classOverride.apply(extendedConfig);
+        }
+        
+        TTLOverride methodOverride = callingMethod != null ? 
+            manager.getMethodTTLOverride(callingClass, callingMethod) : null;
+        if (methodOverride != null) {
+            return methodOverride.apply(extendedConfig);
+        }
+        
+        TTLOverride fieldOverride = fieldName != null ? 
+            manager.getFieldTTLOverride(callingClass, fieldName) : null;
+        if (fieldOverride != null) {
+            return fieldOverride.apply(extendedConfig);
+        }
+        
+        return extendedConfig;
     }
     
     /**
