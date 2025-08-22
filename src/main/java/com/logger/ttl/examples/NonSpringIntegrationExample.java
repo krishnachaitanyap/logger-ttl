@@ -1,4 +1,4 @@
-package com.logger.ttl.integration.examples;
+package com.logger.ttl.examples;
 
 import com.logger.ttl.*;
 import com.logger.ttl.integration.*;

@@ -1,4 +1,4 @@
-package com.logger.ttl.demo;
+package com.logger.ttl.examples.demo;
 
 import com.logger.ttl.*;
 import org.slf4j.Logger;

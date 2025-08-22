@@ -316,6 +316,29 @@ Enable debug logging to see TTL processing:
 logging.level.com.logger.ttl=DEBUG
 ```
 
+## Project Structure
+
+```
+src/
+├── main/java/com/logger/ttl/
+│   ├── LogLevel.java              # Log level enumeration
+│   ├── LogTTL.java                # TTL annotation definition
+│   ├── TTLConfig.java             # TTL configuration class
+│   ├── TTLAnnotationProcessor.java # Annotation processing logic
+│   ├── TTLLogger.java             # Main logger wrapper
+│   ├── TTLLoggerFactory.java      # Logger factory
+│   ├── TTLManager.java            # Runtime TTL management
+│   ├── TTLOverride.java           # TTL override definitions
+│   ├── integration/               # Non-Spring integration layer
+│   └── examples/                  # Examples and demos
+│       ├── demo/                  # Demo applications
+│       ├── UserService.java       # Example service
+│       ├── OrderService.java      # Example service
+│       └── PaymentService.java    # Example service
+├── test/java/com/logger/ttl/      # Unit tests
+└── docs/                          # Documentation and scripts
+```
+
 ## Contributing
 
 1. Fork the repository

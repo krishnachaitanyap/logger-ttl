@@ -1,5 +1,6 @@
 package com.logger.ttl;
 
+import com.logger.ttl.metrics.TTLMetricsManager;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,6 +46,7 @@ public class TTLManager {
      */
     public void enableAllTTL() {
         globalTTLOverride.set(true);
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("global_enable");
     }
     
     /**
@@ -52,6 +54,7 @@ public class TTLManager {
      */
     public void disableAllTTL() {
         globalTTLOverride.set(false);
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("global_disable");
     }
     
     /**
@@ -80,6 +83,8 @@ public class TTLManager {
      */
     public void overrideClassTTL(Class<?> clazz, TTLOverride override) {
         classOverrides.put(clazz, override);
+        TTLMetricsManager.getInstance().getMetrics().recordOverrideOperation(override.getType());
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("class_override");
     }
     
     /**
@@ -87,6 +92,7 @@ public class TTLManager {
      */
     public void removeClassTTLOverride(Class<?> clazz) {
         classOverrides.remove(clazz);
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("class_override_remove");
     }
     
     /**
@@ -95,6 +101,8 @@ public class TTLManager {
     public void overrideMethodTTL(Class<?> clazz, String methodName, TTLOverride override) {
         String key = clazz.getName() + "#" + methodName;
         methodOverrides.put(key, override);
+        TTLMetricsManager.getInstance().getMetrics().recordOverrideOperation(override.getType());
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("method_override");
     }
     
     /**
@@ -130,6 +138,7 @@ public class TTLManager {
         fieldOverrides.clear();
         globalTTLOverride.set(false);
         globalTTLExtension.set(0);
+        TTLMetricsManager.getInstance().getMetrics().recordConfigurationChange("clear_all");
     }
     
     /**
@@ -220,5 +229,42 @@ public class TTLManager {
         summary.append("Method Overrides: ").append(methodOverrides.size()).append("\n");
         summary.append("Field Overrides: ").append(fieldOverrides.size()).append("\n");
         return summary.toString();
+    }
+    
+    /**
+     * Get count of active TTL configurations (for metrics)
+     */
+    public int getActiveConfigurationsCount() {
+        return classOverrides.size() + methodOverrides.size() + fieldOverrides.size();
+    }
+    
+    /**
+     * Get count of class overrides (for metrics)
+     */
+    public int getClassOverridesCount() {
+        return classOverrides.size();
+    }
+    
+    /**
+     * Get count of method overrides (for metrics)
+     */
+    public int getMethodOverridesCount() {
+        return methodOverrides.size();
+    }
+    
+    /**
+     * Get count of field overrides (for metrics)
+     */
+    public int getFieldOverridesCount() {
+        return fieldOverrides.size();
+    }
+    
+    /**
+     * Update metrics with current configuration counts
+     */
+    public void updateMetrics() {
+        TTLMetricsManager metricsManager = TTLMetricsManager.getInstance();
+        metricsManager.getMetrics().updateActiveConfigsCount(getActiveConfigurationsCount());
+        metricsManager.getMetrics().updateOverrideConfigsCount(getActiveConfigurationsCount());
     }
 }

@@ -1,5 +1,6 @@
 package com.logger.ttl;
 
+import com.logger.ttl.metrics.TTLMetricsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -230,6 +231,21 @@ public class TTLLogger {
         }
         
         TTLConfig config = TTLAnnotationProcessor.getTTLConfig(loggerClass, level);
-        return config.shouldLog(level);
+        boolean shouldLog = config.shouldLog(level);
+        
+        // Record metrics
+        try {
+            TTLMetricsManager metricsManager = TTLMetricsManager.getInstance();
+            if (shouldLog) {
+                metricsManager.getMetrics().recordActiveLog(level);
+            } else {
+                metricsManager.getMetrics().recordExpiredLog(level);
+            }
+        } catch (Exception e) {
+            // Don't let metrics errors interfere with logging
+            // This could happen if metrics are not properly configured
+        }
+        
+        return shouldLog;
     }
 }

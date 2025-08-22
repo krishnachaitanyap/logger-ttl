@@ -1,0 +1,95 @@
+# Prometheus configuration for TTL Framework metrics
+# This file shows how to configure Prometheus to scrape TTL metrics
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rule files for alerting
+rule_files:
+  - "ttl-alerts.yml"
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - localhost:9093
+
+# Scrape configurations
+scrape_configs:
+  # TTL Framework metrics from Spring Boot application
+  - job_name: 'ttl-spring-boot'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    
+  # TTL Framework metrics from custom endpoint
+  - job_name: 'ttl-custom-endpoint'
+    static_configs:
+      - targets: ['localhost:8081']
+    metrics_path: '/metrics/ttl'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    
+  # TTL Framework metrics from application with custom path
+  - job_name: 'ttl-application-metrics'
+    static_configs:
+      - targets: ['localhost:8082']
+    metrics_path: '/api/metrics/ttl'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    
+  # TTL Framework metrics from microservice
+  - job_name: 'ttl-microservice'
+    static_configs:
+      - targets: ['localhost:8083']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    # Add service discovery labels
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}'
+      - source_labels: [__address__]
+        target_label: service
+        regex: '([^:]+)(?::\d+)?'
+        replacement: 'ttl-framework'
+
+# Example for Kubernetes service discovery
+# - job_name: 'ttl-kubernetes'
+#   kubernetes_sd_configs:
+#     - role: pod
+#       namespaces:
+#         names:
+#           - default
+#   relabel_configs:
+#     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+#       action: keep
+#       regex: true
+#     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+#       action: replace
+#       target_label: __metrics_path__
+#       regex: (.+)
+#     - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+#       action: replace
+#       regex: ([^:]+)(?::\d+)?;(\d+)
+#       replacement: $1:$2
+#       target_label: __address__
+#     - source_labels: [__meta_kubernetes_namespace]
+#       action: replace
+#       target_label: kubernetes_namespace
+#     - source_labels: [__meta_kubernetes_pod_name]
+#       action: replace
+#       target_label: kubernetes_pod_name
+#     - source_labels: [__meta_kubernetes_service_name]
+#       action: replace
+#       target_label: kubernetes_service_name
