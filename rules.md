@@ -129,136 +129,230 @@ The goal is to improve **observability**, reduce **noise**, and ensure **securit
 ---
 
 ---
-Rule 1: Redundant Logs
 
-Instruction: Detect duplicate or unnecessary logs.
+# AI Log Optimization Rules Prompt for Java Repositories
 
-Criteria:
+This document defines detailed rules for analyzing **Java code repositories** to identify logging-related issues.  
+Each rule is structured with:
+- **Description**: What the rule checks.
+- **Rationale**: Why it is important.
+- **Detection Method**: How to identify it in code/logs.
+- **Example (Bad vs Good)**: Illustrations.
+- **Expected Output Format**: JSON output for interpretation.
 
-Logs that repeat the same variable/message in the same method/class.
+---
 
-Multiple logs without contextual difference.
+## Rule 1: Redundant Logs
 
-Example:
+**Description:** Detect duplicate or unnecessary log statements that provide no new information.  
+**Rationale:** Redundant logs increase noise, storage costs, and make debugging harder.  
+**Detection Method:**  
+- Identify repeated log statements within the same method/class.  
+- Detect consecutive logs with similar text.  
 
-log.info("User created successfully");
-log.info("User created successfully");
+**Example:**  
+```java
+// Bad
+logger.info("Starting process");
+logger.info("Process started");
 
+// Good
+logger.info("Process started successfully");
+```
 
-Expected Output:
-
+**Expected Output (JSON):**  
+```json
 {
-  "rule": "Redundant Log",
-  "line": 23,
-  "message": "Duplicate log with same text",
-  "recommendation": "Remove one of the logs"
+  "file": "Example.java",
+  "line": 12,
+  "issue": "Redundant log detected",
+  "recommendation": "Merge duplicate log statements into one meaningful log."
 }
+```
 
-Rule 2: Incorrect Log Level
+---
 
-Instruction: Ensure logs use the appropriate log level.
+## Rule 2: Incorrect Log Level
 
-Criteria:
+**Description:** Ensure logs are written at the correct severity level.  
+**Rationale:** Wrong log levels mislead monitoring systems and can hide critical issues.  
+**Detection Method:**  
+- Match keywords (`exception`, `error`, `fail`) with `ERROR`.  
+- Match state-change or workflow messages with `INFO`.  
+- Debugging details with `DEBUG`.  
 
-ERROR: for exceptions, failures, unexpected conditions.
+**Example:**  
+```java
+// Bad
+logger.debug("Database connection failed: " + e.getMessage());
 
-WARN: for deprecated features, recoverable issues.
+// Good
+logger.error("Database connection failed", e);
+```
 
-INFO: for high-level flow, successful ops.
-
-DEBUG: for variable values, state changes.
-
-TRACE: for very fine-grained details.
-
-Example (incorrect):
-
-try {
-    saveUser(user);
-} catch (Exception e) {
-    log.info("Failed to save user", e); // Wrong
-}
-
-
-Expected Output:
-
+**Expected Output (JSON):**  
+```json
 {
-  "rule": "Incorrect Log Level",
-  "line": 56,
-  "message": "Exception logged at INFO instead of ERROR",
-  "recommendation": "Use log.error for exceptions"
+  "file": "DatabaseService.java",
+  "line": 45,
+  "issue": "Incorrect log level",
+  "recommendation": "Use ERROR instead of DEBUG for failures."
 }
+```
 
-Rule 3: Security-Sensitive Logs
+---
 
-Instruction: Detect logs that may leak sensitive data.
+## Rule 3: Security Risk Logs
 
-Criteria:
+**Description:** Detect logs that expose sensitive information (passwords, tokens, keys, PII).  
+**Rationale:** Logging sensitive data violates compliance (GDPR, PCI DSS) and is a security risk.  
+**Detection Method:**  
+- Regex patterns for `password`, `secret`, `token`, `key`.  
+- Detect `logger` calls inside authentication flows.  
 
-Logs containing passwords, tokens, API keys, PII.
+**Example:**  
+```java
+// Bad
+logger.info("User logged in with password: " + password);
 
-Full object dumps that may contain confidential data.
+// Good
+logger.info("User logged in successfully for userId=" + userId);
+```
 
-Example (bad):
-
-log.debug("User login request: " + request.toString());
-
-
-Expected Output:
-
+**Expected Output (JSON):**  
+```json
 {
-  "rule": "Security Risk",
-  "line": 77,
-  "message": "Possible sensitive data (request object) logged",
-  "recommendation": "Avoid logging full objects containing user data"
+  "file": "AuthService.java",
+  "line": 78,
+  "issue": "Sensitive data logged",
+  "recommendation": "Do not log passwords, tokens, or PII."
 }
+```
 
-Rule 4: High-Frequency Logs
+---
 
-Instruction: Detect logs inside tight loops or frequent paths.
+## Rule 4: High-Frequency Logs
 
-Criteria:
+**Description:** Detect logs inside loops, recursion, or high-throughput code paths.  
+**Rationale:** These logs flood log systems and increase costs.  
+**Detection Method:**  
+- Identify log statements inside `for`, `while`, or recursive methods.  
+- Highlight logs in critical request paths.  
 
-Logging inside for/while loops.
-
-Logging in methods called at high TPS (e.g., filters, interceptors).
-
-Example (bad):
-
+**Example:**  
+```java
+// Bad
 for (Item item : items) {
-    log.debug("Processing item: " + item.getId());
+    logger.info("Processing item: " + item.getId());
 }
 
+// Good
+logger.info("Processing " + items.size() + " items");
+```
 
-Expected Output:
-
+**Expected Output (JSON):**  
+```json
 {
-  "rule": "High Frequency Log",
+  "file": "OrderProcessor.java",
   "line": 33,
-  "message": "Log inside loop may flood logs under load",
-  "recommendation": "Aggregate or sample logs instead of per-item logging"
+  "issue": "High-frequency log inside loop",
+  "recommendation": "Move log outside loop or summarize."
 }
+```
 
-Rule 5: Placeholder Misuse
+---
 
-Instruction: Detect inefficient string concatenation in logs.
+## Rule 5: Missing Context in Logs
 
-Criteria:
+**Description:** Ensure logs provide enough context (correlation IDs, request IDs).  
+**Rationale:** Without context, logs are hard to trace across distributed systems.  
+**Detection Method:**  
+- Detect `logger` calls without request/session ID in API services.  
+- Suggest structured logging (JSON).  
 
-Avoid "log.debug("Value: " + obj)"
+**Example:**  
+```java
+// Bad
+logger.info("Order processed");
 
-Prefer "log.debug("Value: {}", obj)"
+// Good
+logger.info("Order processed successfully, orderId=" + orderId + ", userId=" + userId);
+```
 
-Example (bad):
-
-log.debug("Processing item " + item.getId());
-
-
-Expected Output:
-
+**Expected Output (JSON):**  
+```json
 {
-  "rule": "Inefficient Log Construction",
-  "line": 21,
-  "message": "String concatenation in log statement",
-  "recommendation": "Use parameterized logging instead"
+  "file": "OrderService.java",
+  "line": 90,
+  "issue": "Missing log context",
+  "recommendation": "Add orderId or correlationId to logs."
 }
+```
+
+---
+
+## Rule 6: Expired Logs
+
+**Description:** Logs that should expire after a certain period (e.g., feature rollout, debugging).  
+**Rationale:** Prevents stale or unnecessary logs staying forever.  
+**Detection Method:**  
+- Detect log annotations/configs with expiry date.  
+- Flag logs without lifecycle management.  
+
+**Example:**  
+```java
+// Bad
+logger.info("Debug log for feature rollout");
+
+// Good (with expiry metadata)
+@LogExpiry("90d")
+logger.info("Debug log for feature rollout");
+```
+
+**Expected Output (JSON):**  
+```json
+{
+  "file": "FeatureRollout.java",
+  "line": 25,
+  "issue": "Log without expiry",
+  "recommendation": "Add expiry metadata to temporary logs."
+}
+```
+
+---
+
+# Output Format
+
+For every Java file analyzed, output a JSON array of issues:  
+
+```json
+[
+  {
+    "file": "Example.java",
+    "line": 12,
+    "issue": "Redundant log detected",
+    "recommendation": "Merge duplicate log statements into one meaningful log."
+  },
+  {
+    "file": "DatabaseService.java",
+    "line": 45,
+    "issue": "Incorrect log level",
+    "recommendation": "Use ERROR instead of DEBUG for failures."
+  }
+]
+```
+
+---
+
+# Usage
+
+These rules should be executed by an **AI-assisted log review system**.  
+For every file in a Java repository, apply these rules and generate a structured JSON report.  
+The report can then be consumed by:  
+- CI/CD pipelines for log quality gates.  
+- Observability platforms for feedback loops.  
+- Developers for improving log hygiene.
+
+---
+
 ---
