@@ -127,3 +127,138 @@ The goal is to improve **observability**, reduce **noise**, and ensure **securit
 - Integrate into **LogOptimizer AI** to continuously refine rules from production feedback.
 
 ---
+
+---
+Rule 1: Redundant Logs
+
+Instruction: Detect duplicate or unnecessary logs.
+
+Criteria:
+
+Logs that repeat the same variable/message in the same method/class.
+
+Multiple logs without contextual difference.
+
+Example:
+
+log.info("User created successfully");
+log.info("User created successfully");
+
+
+Expected Output:
+
+{
+  "rule": "Redundant Log",
+  "line": 23,
+  "message": "Duplicate log with same text",
+  "recommendation": "Remove one of the logs"
+}
+
+Rule 2: Incorrect Log Level
+
+Instruction: Ensure logs use the appropriate log level.
+
+Criteria:
+
+ERROR: for exceptions, failures, unexpected conditions.
+
+WARN: for deprecated features, recoverable issues.
+
+INFO: for high-level flow, successful ops.
+
+DEBUG: for variable values, state changes.
+
+TRACE: for very fine-grained details.
+
+Example (incorrect):
+
+try {
+    saveUser(user);
+} catch (Exception e) {
+    log.info("Failed to save user", e); // Wrong
+}
+
+
+Expected Output:
+
+{
+  "rule": "Incorrect Log Level",
+  "line": 56,
+  "message": "Exception logged at INFO instead of ERROR",
+  "recommendation": "Use log.error for exceptions"
+}
+
+Rule 3: Security-Sensitive Logs
+
+Instruction: Detect logs that may leak sensitive data.
+
+Criteria:
+
+Logs containing passwords, tokens, API keys, PII.
+
+Full object dumps that may contain confidential data.
+
+Example (bad):
+
+log.debug("User login request: " + request.toString());
+
+
+Expected Output:
+
+{
+  "rule": "Security Risk",
+  "line": 77,
+  "message": "Possible sensitive data (request object) logged",
+  "recommendation": "Avoid logging full objects containing user data"
+}
+
+Rule 4: High-Frequency Logs
+
+Instruction: Detect logs inside tight loops or frequent paths.
+
+Criteria:
+
+Logging inside for/while loops.
+
+Logging in methods called at high TPS (e.g., filters, interceptors).
+
+Example (bad):
+
+for (Item item : items) {
+    log.debug("Processing item: " + item.getId());
+}
+
+
+Expected Output:
+
+{
+  "rule": "High Frequency Log",
+  "line": 33,
+  "message": "Log inside loop may flood logs under load",
+  "recommendation": "Aggregate or sample logs instead of per-item logging"
+}
+
+Rule 5: Placeholder Misuse
+
+Instruction: Detect inefficient string concatenation in logs.
+
+Criteria:
+
+Avoid "log.debug("Value: " + obj)"
+
+Prefer "log.debug("Value: {}", obj)"
+
+Example (bad):
+
+log.debug("Processing item " + item.getId());
+
+
+Expected Output:
+
+{
+  "rule": "Inefficient Log Construction",
+  "line": 21,
+  "message": "String concatenation in log statement",
+  "recommendation": "Use parameterized logging instead"
+}
+---
